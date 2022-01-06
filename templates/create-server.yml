@@ -1,0 +1,105 @@
+---
+- hosts: localhost
+  connection: localhost
+  gather_facts: False
+  vars_files:
+    - ../vars/vars_server.yml
+    - ../vars/aws_keys.yml
+
+  tasks:
+
+# Create the security groups for ec2
+
+    - name: Create node security group for EC2
+      ec2_group:
+        aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+        aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+        name: "{{ node_security_group }}"
+        description: Security group for nodes
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            cidr_ip: 0.0.0.0/0
+      register: node_sg
+    - debug:
+        msg: "Nodes security group is: {{ node_sg.group_id }}"
+
+
+# Create the ec2 key pair
+
+    - name: create a new ec2 key pair, returns generated private key.
+      ec2_key:
+        region: "{{ region }}"
+        name: ansible-demo
+      register: ansible_demo
+
+    - name: Save private key
+      copy: content="{{ ansible_demo.key.private_key }}" dest="~/ansible-demo.pem" mode=0400
+      when: ansible_demo.changed
+    - debug:
+        msg: "Pem Data {{ ansible_demo}}"
+
+
+# Launch instances
+
+    - name: Launch node EC2 instances
+      ec2:
+        aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+        aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ image }}"
+        wait: true
+        region: "{{ region }}"
+        group_id: "{{ node_sg.group_id }}"
+        keypair: "{{ keypair }}"
+        count: "{{ node_count }}"
+        instance_tags: "{{ infra_tags_node }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 8
+            delete_on_termination: true
+      register: ec2_node
+    - debug:
+        msg: "Ec2 Data is {{ ec2_node }}"
+
+# OPTIONAL - Wait for instances to come up.
+    - name: Wait for instances to come up
+      wait_for_connection:
+        delay: 10
+        timeout: 10
+
+
+# Add deployed nodes to the inventory
+
+    - name: Add nodes instance to inventory.ini
+      add_host:
+        name: "{{ item.public_ip }}"
+        groups: remote_nodes
+        loop: "{{ ec2_node.instances }}"
+
+
+    - name: Add nodes instance to inventory.ini
+      add_host:
+        name: "{{ ec2_node.instances[0].public_ip }}"
+        groups: remote_nodes
+
+
+    - name: Add nodes instance to inventory.ini
+      add_host:
+        name: "{{ ec2_node.instances[0].public_ip }}"
+        groups: remote_nodes
+
+
+    - name: Tag Nodes
+      ec2_tag:
+        region: eu-central-1
+        resource: "{{ ec2_node.instances[0].id }}"
+        state: present
+        tags:
+          Name: node-"{{ec2_node.instances[0].id}}"
+

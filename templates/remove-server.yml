@@ -1,0 +1,43 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+    filters:
+      "tag:type": node
+  vars_files:
+    - ../vars/aws_keys.yml
+    - ../vars/vars_server.yml
+  tasks:
+    - name: "Gather EC2 facts"
+      ec2_instance_facts:
+        aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+        aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+        region: "{{ region }}"
+        filters: "{{ filters }}"
+      register: ec2
+    - debug:
+        msg: "{{ ec2 }}"
+
+    - name: "Terminate EC2"
+      ec2:
+        instance_ids: '{{ item.instance_id }}'
+        state: absent
+        region: "{{ region }}"
+        aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+        aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+      loop: "{{ ec2.instances }}"
+
+    - name: Wait for EC2 termination
+      wait_for:
+        delay: 30
+        timeout: 30
+
+    - name: "Delete EC2 security group"
+      ec2_group:
+        aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
+        aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
+        region: "{{ region }}"
+        name: "{{ security_group }}"
+        group_id: "{{ item.group_id }}"
+        state: absent
+      loop: "{{ ec2.instances[0].security_groups }}"
