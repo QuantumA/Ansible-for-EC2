@@ -1,6 +1,6 @@
 ---
 - hosts: localhost
-  connection: localhost
+  connection: local
   gather_facts: False
   vars_files:
     - ../vars/vars_server.yml
@@ -9,7 +9,6 @@
   tasks:
 
 # Create the security groups for ec2
-
     - name: Create node security group for EC2
       ec2_group:
         aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
@@ -80,7 +79,7 @@
       add_host:
         name: "{{ item.public_ip }}"
         groups: remote_nodes
-        loop: "{{ ec2_node.instances }}"
+      loop: "{{ ec2_node.instances }}"
 
 
     - name: Add nodes instance to inventory.ini
