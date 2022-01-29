@@ -2,5 +2,4 @@
 *.retry
 vars/aws_keys.yml
 ansible.cfg
-inventory.ini
 tmp
