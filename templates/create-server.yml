@@ -82,23 +82,12 @@
       loop: "{{ ec2_node.instances }}"
 
 
-    - name: Add nodes instance to inventory.ini
-      add_host:
-        name: "{{ ec2_node.instances[0].public_ip }}"
-        groups: remote_nodes
-
-
-    - name: Add nodes instance to inventory.ini
-      add_host:
-        name: "{{ ec2_node.instances[0].public_ip }}"
-        groups: remote_nodes
-
-
     - name: Tag Nodes
       ec2_tag:
         region: eu-central-1
-        resource: "{{ ec2_node.instances[0].id }}"
+        resource: "{{ item.id }}"
         state: present
         tags:
-          Name: node-"{{ec2_node.instances[0].id}}"
+          Name: node-"{{item.id}}"
+      loop: "{{ ec2_node.instances }}"
 
