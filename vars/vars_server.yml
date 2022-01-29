@@ -1,10 +1,9 @@
 instance_type: t2.micro
-node_count: 1 # number of EC2 instances for the nodes
-node_security_group: node_sg
+instance_count: 1 # number of EC2 instances for the nodes
+security_group: instances_security_group # Name for the security group
 image: ami-0b418580298265d5c # Ubuntu 18.04 eu-central-1
 keypair: ansible-demo # EC2 AWS key pair name
-region: eu-central-1
-infra_tags_node:
-  app: flask
-  type: node
+region: eu-central-1 # Region where instances will be deployed
+infra_tags_node: # Mechanism of tagging
+  type: micro
 user: app

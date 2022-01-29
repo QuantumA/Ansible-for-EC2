@@ -13,7 +13,7 @@
       ec2_group:
         aws_access_key: "{{ AWS_ACCESS_KEY_ID }}"
         aws_secret_key: "{{ AWS_SECRET_ACCESS_KEY }}"
-        name: "{{ node_security_group }}"
+        name: "{{ security_group }}"
         description: Security group for nodes
         region: "{{ region }}"
         rules:
@@ -24,9 +24,9 @@
         rules_egress:
           - proto: all
             cidr_ip: 0.0.0.0/0
-      register: node_sg
+      register: instance_sg
     - debug:
-        msg: "Nodes security group is: {{ node_sg.group_id }}"
+        msg: "Nodes security group is: {{ instance_sg.group_id }}"
 
 
 # Create the ec2 key pair
@@ -54,9 +54,9 @@
         image: "{{ image }}"
         wait: true
         region: "{{ region }}"
-        group_id: "{{ node_sg.group_id }}"
+        group_id: "{{ instance_sg.group_id }}"
         keypair: "{{ keypair }}"
-        count: "{{ node_count }}"
+        count: "{{ instance_count }}"
         instance_tags: "{{ infra_tags_node }}"
         volumes:
           - device_name: /dev/sda1
@@ -80,6 +80,12 @@
         name: "{{ item.public_ip }}"
         groups: remote_nodes
       loop: "{{ ec2_node.instances }}"
+
+    - name: Add security groups to inventory.ini
+      add_host:
+        name: "{{ instance_sg.group_id }}"
+        groups: security_groups
+
 
 
     - name: Tag Nodes
